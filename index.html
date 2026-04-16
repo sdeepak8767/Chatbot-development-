@@ -194,10 +194,15 @@
         body: JSON.stringify({ contents: conversationHistory })
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error?.message || "API Request Failed");
+        throw new Error(data.error?.message || `API Request Failed (${response.status})`);
       }
 
       // Extract generated text safely
@@ -207,12 +212,13 @@
         addMessage(botReply, false);
         conversationHistory.push({ role: "model", parts: [{ text: botReply }] });
       } else {
-        throw new Error("Empty response");
+        throw new Error("Empty response from API");
       }
 
     } catch (error) {
       console.error("Error:", error);
-      addMessage("Something went wrong. Try again.", false);
+      // Display the actual error message so we can figure out why it's failing
+      addMessage(`Error: ${error.message} (Check DevTools console for details)`, false);
       // Remove the last user message from memory on error so we can retry
       conversationHistory.pop();
     } finally {
